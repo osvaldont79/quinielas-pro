@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quinielas-Pro • Jornada 17</title>
+  <!-- Firebase SDK (Versión COMPAT para navegadores) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    body {font-family:Arial,sans-serif;background:linear-gradient(135deg,#0d1b2a,#1b263b,#415a77);color:#fff;margin:0;padding:15px;}
+    .contenedor {max-width:850px;margin:0 auto;background:rgba(0,0,0,0.7);border-radius:20px;padding:30px;box-shadow:0 15px 50px rgba(0,0,0,0.9);}
+    h1 {text-align:center;font-size:3.2em;color:#ffd700;text-shadow:0 0 15px gold;}
+    .sub {text-align:center;font-size:1.6em;color:#ffeb3b;margin:15px 0 25px;}
+    input,select {width:100%;padding:16px;margin:10px 0;border-radius:12px;border:none;font-size:18px;}
+    .partido {background:#fff;color:#000;margin:18px 0;padding:20px;border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,0.5);}
+    .partido label {font-weight:bold;font-size:1.4em;text-align:center;display:block;margin-bottom:15px;color:#1e3c72;}
+    .botones {display:flex;justify-content:center;gap:30px;}
+    .botones button {width:110px;height:85px;font-size:32px;font-weight:bold;border:none;border-radius:18px;cursor:pointer;}
+    
+    .local {background:#2e7d32;color:white;}
+    .empate {background:#f57c00;color:white;}
+    .visita {background:#1565c0;color:white;}
+    
+    .seleccionado {transform:scale(1.25);box-shadow:0 0 30px gold;}
+    .botones-flex {display:flex;gap:15px;margin-top:40px;}
+    .btn-generar,.btn-guardar {flex:1;padding:20px;font-size:22px;font-weight:bold;border:none;border-radius:50px;cursor:pointer;}
+    .btn-generar {background:#ffd700;color:#000;}
+    .btn-guardar {background:#4caf50;color:white;}
+    .ok {color:#4caf50;text-align:center;font-size:20px;margin-top:20px;font-weight:bold;}
+    .error {color:#ff6b6b;text-align:center;font-size:18px;margin-top:10px;}
+    
+    /* Loader */
+    .loader {display:none;border:5px solid #f3f3f3;border-top:5px solid #3498db;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:20px auto;}
+    @keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+    
+    /* Panel admin */
+    .btn-admin-container {text-align:center;margin:20px 0;}
+    .btn-admin {background:#9c27b0;color:white;padding:12px 25px;border:none;border-radius:25px;cursor:pointer;font-size:16px;font-weight:bold;}
+    #panel-admin {display:none;background:#000;padding:20px;border-radius:15px;margin-top:40px;}
+    #tabla-general {width:100%;border-collapse:collapse;margin-top:15px;}
+    #tabla-general th,#tabla-general td {border:1px solid #ffd700;padding:8px;text-align:center;font-size:13px;}
+    #tabla-general th {background:#ffd700;color:#000;}
+    .pagado {background:#1b5e20;color:white;}
+    .nopagado {background:#c62828;color:white;}
+    .btn-exportar {background:#2196F3;color:white;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;margin:5px;}
+    
+    /* Modal de contraseña */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-contenido {
+      background: #222;
+      padding: 30px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+    
+    @media (max-width: 768px) {
+      h1 {font-size:2em;}
+      .botones button {width:80px;height:65px;font-size:26px;}
+      .btn-generar,.btn-guardar {font-size:18px;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="contenedor">
+  <h1>QUINIELAS-PRO</h1>
+  <p class="sub">Jornada 17 • Apertura 2025</p>
+
+  <input type="text" id="nombre" placeholder="Nombre completo" required>
+  <input type="text" id="telefono" placeholder="WhatsApp" required>
+  <select id="pago" required>
+    <option value="">¿Ya depositaste los $300?</option>
+    <option value="si">Sí, ya pagué</option>
+    <option value="no">No, pago esta semana</option>
+  </select>
+
+  <!-- 14 PARTIDOS -->
+  <div class="partido"><label>1. Tigres vs América</label><div class="botones"><button class="local" onclick="marcar(this,1)">L</button><button class="empate" onclick="marcar(this,1)">E</button><button class="visita" onclick="marcar(this,1)">V</button><input type="hidden" id="res1"></div></div>
+  <div class="partido"><label>2. Cruz Azul vs Monterrey</label><div class="botones"><button class="local" onclick="marcar(this,2)">L</button><button class="empate" onclick="marcar(this,2)">E</button><button class="visita" onclick="marcar(this,2)">V</button><input type="hidden" id="res2"></div></div>
+  <div class="partido"><label>3. Chivas vs Toluca</label><div class="botones"><button class="local" onclick="marcar(this,3)">L</button><button class="empate" onclick="marcar(this,3)">E</button><button class="visita" onclick="marcar(this,3)">V</button><input type="hidden" id="res3"></div></div>
+  <div class="partido"><label>4. Pumas vs Pachuca</label><div class="botones"><button class="local" onclick="marcar(this,4)">L</button><button class="empate" onclick="marcar(this,4)">E</button><button class="visita" onclick="marcar(this,4)">V</button><input type="hidden" id="res4"></div></div>
+  <div class="partido"><label>5. Atlas vs León</label><div class="botones"><button class="local" onclick="marcar(this,5)">L</button><button class="empate" onclick="marcar(this,5)">E</button><button class="visita" onclick="marcar(this,5)">V</button><input type="hidden" id="res5"></div></div>
+  <div class="partido"><label>6. Santos vs Tijuana</label><div class="botones"><button class="local" onclick="marcar(this,6)">L</button><button class="empate" onclick="marcar(this,6)">E</button><button class="visita" onclick="marcar(this,6)">V</button><input type="hidden" id="res6"></div></div>
+  <div class="partido"><label>7. Necaxa vs Querétaro</label><div class="botones"><button class="local" onclick="marcar(this,7)">L</button><button class="empate" onclick="marcar(this,7)">E</button><button class="visita" onclick="marcar(this,7)">V</button><input type="hidden" id="res7"></div></div>
+  <div class="partido"><label>8. Mazatlán vs Puebla</label><div class="botones"><button class="local" onclick="marcar(this,8)">L</button><button class="empate" onclick="marcar(this,8)">E</button><button class="visita" onclick="marcar(this,8)">V</button><input type="hidden" id="res8"></div></div>
+  <div class="partido"><label>9. San Luis vs Juárez</label><div class="botones"><button class="local" onclick="marcar(this,9)">L</button><button class="empate" onclick="marcar(this,9)">E</button><button class="visita" onclick="marcar(this,9)">V</button><input type="hidden" id="res9"></div></div>
+  <div class="partido"><label>10. Necaxa vs Guadalajara</label><div class="botones"><button class="local" onclick="marcar(this,10)">L</button><button class="empate" onclick="marcar(this,10)">E</button><button class="visita" onclick="marcar(this,10)">V</button><input type="hidden" id="res10"></div></div>
+  <div class="partido"><label>11. León vs Cruz Azul</label><div class="botones"><button class="local" onclick="marcar(this,11)">L</button><button class="empate" onclick="marcar(this,11)">E</button><button class="visita" onclick="marcar(this,11)">V</button><input type="hidden" id="res11"></div></div>
+  <div class="partido"><label>12. Monterrey vs Tigres</label><div class="botones"><button class="local" onclick="marcar(this,12)">L</button><button class="empate" onclick="marcar(this,12)">E</button><button class="visita" onclick="marcar(this,12)">V</button><input type="hidden" id="res12"></div></div>
+  <div class="partido"><label>13. América vs Pumas</label><div class="botones"><button class="local" onclick="marcar(this,13)">L</button><button class="empate" onclick="marcar(this,13)">E</button><button class="visita" onclick="marcar(this,13)">V</button><input type="hidden" id="res13"></div></div>
+  <div class="partido"><label>14. Toluca vs Atlas</label><div class="botones"><button class="local" onclick="marcar(this,14)">L</button><button class="empate" onclick="marcar(this,14)">E</button><button class="visita" onclick="marcar(this,14)">V</button><input type="hidden" id="res14"></div></div>
+
+  <div class="botones-flex">
+    <button class="btn-generar" onclick="generarPDF()">DESCARGAR PDF</button>
+    <button class="btn-guardar" onclick="guardarDatos()">GUARDAR EN FIREBASE</button>
+  </div>
+
+  <div class="loader" id="loader"></div>
+  <div class="ok" id="ok"></div>
+  <div class="error" id="error"></div>
+</div>
+
+<!-- Botón para abrir panel admin -->
+<div class="btn-admin-container">
+  <button class="btn-admin" onclick="mostrarModalContraseña()">ABRIR PANEL ADMIN</button>
+</div>
+
+<!-- Modal para contraseña -->
+<div class="modal-overlay" id="modalContraseña">
+  <div class="modal-contenido">
+    <h2 style="color:#ffd700;">ACCESO ADMINISTRADOR</h2>
+    <p>Ingresa la contraseña:</p>
+    <input type="password" id="inputContraseña" placeholder="Contraseña" style="width:100%;">
+    <div>
+      <button onclick="verificarContraseña()" style="background:#4caf50;color:white;">INGRESAR</button>
+      <button onclick="cerrarModal()" style="background:#c62828;color:white;">CANCELAR</button>
+    </div>
+    <p id="errorContraseña" style="color:#f44336;margin-top:10px;display:none;">Contraseña incorrecta</p>
+  </div>
+</div>
+
+<!-- PANEL ADMIN -->
+<div id="panel-admin">
+  <h2 style="color:#ffd700;text-align:center;">PANEL ADMIN - TABLA GENERAL</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+    <div>
+      <p style="margin:0;">Total: <span id="total">0</span> | Pagaron: <span id="pagados">0</span> | Pendientes: <span id="pendientes">0</span></p>
+      <button class="btn-exportar" onclick="exportarExcel()">EXPORTAR EXCEL</button>
+      <button class="btn-exportar" onclick="actualizarTabla()">ACTUALIZAR</button>
+    </div>
+    <button class="btn-exportar" onclick="cerrarPanelAdmin()">CERRAR PANEL</button>
+  </div>
+  <table id="tabla-general">
+    <thead>
+      <tr>
+        <th>#</th><th>Nombre</th><th>Tel</th><th>Pago</th>
+        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
+        <th>10</th><th>11</th><th>12</th><th>13</th><th>14</th>
+        <th>Fecha</th><th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+// ============================
+// CONFIGURACIÓN DE FIREBASE
+// ============================
+// ¡USANDO TUS DATOS DE FIREBASE!
+const firebaseConfig = {
+  apiKey: "AIzaSyAikdkE2WmDCRDC1smlInVsqO596AuECro",
+  authDomain: "quinielas-2025.firebaseapp.com",
+  projectId: "quinielas-2025",
+  storageBucket: "quinielas-2025.firebasestorage.app",
+  messagingSenderId: "884182298482",
+  appId: "1:884182298482:web:7d5ee2f54462639598b7eb",
+  measurementId: "G-LMPD2CK3QW"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Nombre de la colección en Firestore
+const PARTICIPANTES_COLLECTION = "quinielasPro2025";
+
+// Contraseña para admin (cámbiala por una más segura)
+const CONTRASEÑA_ADMIN = "admin123";
+
+// Variables globales
+let participantes = [];
+
+// ============================
+// FUNCIONES PRINCIPALES
+// ============================
+function marcar(btn, num) {
+  const grupo = btn.parentNode.querySelectorAll("button");
+  grupo.forEach(b => b.classList.remove("seleccionado"));
+  btn.classList.add("seleccionado");
+  document.getElementById("res" + num).value = btn.innerText;
+}
+
+async function guardarDatos() {
+  const nombre = document.getElementById("nombre").value.trim();
+  const tel = document.getElementById("telefono").value.trim();
+  const pago = document.getElementById("pago").value;
+
+  if (!nombre || !tel || !pago) {
+    mostrarError("Por favor, llena todos los datos: nombre, WhatsApp y estado de pago");
+    return;
+  }
+
+  // Recoger los 14 pronósticos
+  const pronos = [];
+  for (let i = 1; i <= 14; i++) {
+    const valor = document.getElementById("res" + i).value;
+    pronos.push(valor || "-");
+  }
+
+  // Verificar si faltan muchos pronósticos
+  const pronosVacios = pronos.filter(p => p === "-").length;
+  if (pronosVacios > 5) {
+    if (!confirm(`Faltan ${pronosVacios} pronósticos. ¿Seguro que quieres guardar?`)) {
+      return;
+    }
+  }
+
+  // Mostrar loader
+  mostrarLoader(true);
+  ocultarMensajes();
+
+  try {
+    // Crear objeto con los datos
+    const datosParticipante = {
+      nombre,
+      tel,
+      pago,
+      pronosticos: pronos,
+      fecha: new Date().toLocaleString("es-MX"),
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    // Guardar en Firestore
+    await db.collection(PARTICIPANTES_COLLECTION).add(datosParticipante);
+    
+    mostrarExito("¡Datos guardados en Firebase correctamente!");
+    limpiarFormulario();
+    
+  } catch (error) {
+    console.error("Error guardando en Firebase:", error);
+    mostrarError("Error al guardar. Intenta de nuevo: " + error.message);
+  } finally {
+    mostrarLoader(false);
+  }
+}
+
+function generarPDF() {
+  const nombre = document.getElementById("nombre").value.trim();
+  const tel = document.getElementById("telefono").value.trim();
+  const pago = document.getElementById("pago").value;
+
+  if (!nombre || !tel || !pago) {
+    mostrarError("Por favor, llena todos los datos antes de generar el PDF");
+    return;
+  }
+
+  const pronos = [];
+  for (let i = 1; i <= 14; i++) {
+    pronos.push(document.getElementById("res" + i).value || "-");
+  }
+
+  // Crear contenido del PDF/texto
+  const contenido = `
+QUINIELAS-PRO - JORNADA 17
+===========================
+
+Nombre: ${nombre}
+WhatsApp: ${tel}
+Pago: ${pago === "si" ? "PAGADO" : "PENDIENTE"}
+Fecha: ${new Date().toLocaleString("es-MX")}
+
+PRONÓSTICOS:
+------------
+1. Tigres vs América: ${pronos[0]}
+2. Cruz Azul vs Monterrey: ${pronos[1]}
+3. Chivas vs Toluca: ${pronos[2]}
+4. Pumas vs Pachuca: ${pronos[3]}
+5. Atlas vs León: ${pronos[4]}
+6. Santos vs Tijuana: ${pronos[5]}
+7. Necaxa vs Querétaro: ${pronos[6]}
+8. Mazatlán vs Puebla: ${pronos[7]}
+9. San Luis vs Juárez: ${pronos[8]}
+10. Necaxa vs Guadalajara: ${pronos[9]}
+11. León vs Cruz Azul: ${pronos[10]}
+12. Monterrey vs Tigres: ${pronos[11]}
+13. América vs Pumas: ${pronos[12]}
+14. Toluca vs Atlas: ${pronos[13]}
+`;
+
+  // Descargar como archivo de texto
+  descargarArchivo(contenido, `${nombre.replace(/[^a-zA-Z0-9]/g, "_")}_quiniela.txt`);
+  mostrarExito("Archivo generado y descargado");
+}
+
+function limpiarFormulario() {
+  document.getElementById("nombre").value = "";
+  document.getElementById("telefono").value = "";
+  document.getElementById("pago").value = "";
+  for (let i = 1; i <= 14; i++) {
+    document.getElementById("res" + i).value = "";
+    const grupo = document.querySelector(`#res${i}`).parentNode.querySelectorAll("button");
+    grupo.forEach(b => b.classList.remove("seleccionado"));
+  }
+}
+
+// ============================
+// FUNCIONES DE PANEL ADMIN
+// ============================
+async function actualizarTabla() {
+  const tbody = document.querySelector("#tabla-general tbody");
+  const loader = document.createElement("div");
+  loader.className = "loader";
+  loader.style.display = "block";
+  tbody.innerHTML = "";
+  tbody.appendChild(loader);
+
+  try {
+    const querySnapshot = await db.collection(PARTICIPANTES_COLLECTION)
+      .orderBy("timestamp", "desc")
+      .get();
+
+    participantes = [];
+    tbody.innerHTML = "";
+
+    querySnapshot.forEach((doc, index) => {
+      const p = { id: doc.id, ...doc.data() };
+      participantes.push(p);
+
+      const row = document.createElement("tr");
+      
+      // Formatear fecha
+      let fechaMostrar = p.fecha || "Sin fecha";
+      
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${p.nombre}</td>
+        <td>${p.tel}</td>
+        <td class="${p.pago === 'si' ? 'pagado' : 'nopagado'}">
+          ${p.pago === 'si' ? 'PAGADO' : 'NO PAGÓ'}
+        </td>
+        ${p.pronosticos ? p.pronosticos.map(r => `<td><strong>${r}</strong></td>`).join('') : ''}
+        <td>${fechaMostrar}</td>
+        <td>
+          <button onclick="eliminarParticipante('${doc.id}', '${p.nombre}')" 
+            style="background:#c62828;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;">
+            Eliminar
+          </button>
+        </td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+
+    // Actualizar contadores
+    const total = participantes.length;
+    const pagados = participantes.filter(p => p.pago === "si").length;
+    const pendientes = total - pagados;
+
+    document.getElementById("total").textContent = total;
+    document.getElementById("pagados").textContent = pagados;
+    document.getElementById("pendientes").textContent = pendientes;
+
+  } catch (error) {
+    console.error("Error cargando datos:", error);
+    tbody.innerHTML = `<tr><td colspan="20" style="color:#ff6b6b;text-align:center;">Error cargando datos</td></tr>`;
+  }
+}
+
+async function eliminarParticipante(id, nombre) {
+  if (!confirm(`¿Estás seguro de eliminar a "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+    return;
+  }
+
+  try {
+    await db.collection(PARTICIPANTES_COLLECTION).doc(id).delete();
+    alert("Participante eliminado correctamente");
+    await actualizarTabla();
+  } catch (error) {
+    console.error("Error eliminando:", error);
+    alert("Error al eliminar participante");
+  }
+}
+
+function exportarExcel() {
+  if (participantes.length === 0) {
+    alert("No hay datos para exportar");
+    return;
+  }
+
+  // Crear contenido CSV
+  let csv = "Número,Nombre,WhatsApp,Pago,1,2,3,4,5,6,7,8,9,10,11,12,13,14,Fecha\n";
+  
+  participantes.forEach((p, index) => {
+    csv += `${index + 1},"${p.nombre}","${p.tel}","${p.pago === 'si' ? 'PAGADO' : 'NO PAGÓ'}",`;
+    csv += `${p.pronosticos ? p.pronosticos.join(",") : ''},"${p.fecha || ''}"\n`;
+  });
+  
+  descargarArchivo("\uFEFF" + csv, "quinielas_exportacion.csv");
+  alert("Datos exportados a CSV correctamente");
+}
+
+// ============================
+// FUNCIONES AUXILIARES
+// ============================
+function mostrarLoader(mostrar) {
+  document.getElementById("loader").style.display = mostrar ? "block" : "none";
+}
+
+function mostrarExito(mensaje) {
+  document.getElementById("ok").textContent = mensaje;
+  document.getElementById("ok").style.display = "block";
+  document.getElementById("error").style.display = "none";
+  
+  setTimeout(() => {
+    document.getElementById("ok").style.display = "none";
+  }, 5000);
+}
+
+function mostrarError(mensaje) {
+  document.getElementById("error").textContent = mensaje;
+  document.getElementById("error").style.display = "block";
+  document.getElementById("ok").style.display = "none";
+  
+  setTimeout(() => {
+    document.getElementById("error").style.display = "none";
+  }, 5000);
+}
+
+function ocultarMensajes() {
+  document.getElementById("ok").style.display = "none";
+  document.getElementById("error").style.display = "none";
+}
+
+function descargarArchivo(contenido, nombreArchivo) {
+  const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ============================
+// FUNCIONES MODAL ADMIN
+// ============================
+function mostrarModalContraseña() {
+  document.getElementById("modalContraseña").style.display = "flex";
+  document.getElementById("inputContraseña").focus();
+  document.getElementById("errorContraseña").style.display = "none";
+}
+
+function cerrarModal() {
+  document.getElementById("modalContraseña").style.display = "none";
+  document.getElementById("inputContraseña").value = "";
+}
+
+function verificarContraseña() {
+  const contraseñaIngresada = document.getElementById("inputContraseña").value;
+  
+  if (contraseñaIngresada === CONTRASEÑA_ADMIN) {
+    cerrarModal();
+    document.getElementById("panel-admin").style.display = "block";
+    actualizarTabla();
+    document.getElementById("panel-admin").scrollIntoView({ behavior: 'smooth' });
+  } else {
+    document.getElementById("errorContraseña").style.display = "block";
+    document.getElementById("inputContraseña").value = "";
+    document.getElementById("inputContraseña").focus();
+  }
+}
+
+function cerrarPanelAdmin() {
+  document.getElementById("panel-admin").style.display = "none";
+}
+
+// ============================
+// INICIALIZACIÓN
+// ============================
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("Quinielas-Pro Firebase iniciado correctamente");
+  console.log("Proyecto: quinielas-2025");
+});
+
+</script>
+</body>
+</html>
